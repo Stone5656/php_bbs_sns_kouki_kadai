@@ -21,12 +21,24 @@ $sql = 'SELECT bbs_entries.*, users.name AS user_name, users.icon_filename AS us
   . ' WHERE'
   . '   bbs_entries.user_id IN'
   . '     (SELECT followee_user_id FROM user_relationships WHERE follower_user_id = :login_user_id)'
-  . '   OR bbs_entries.user_id = :login_user_id'
-  . ' ORDER BY bbs_entries.created_at DESC';
+  . '   OR bbs_entries.user_id = :login_user_id';
+
+$last_id = $_GET['last_id'] ?? 0;
+$limit   = $_GET['limit']   ?? 5;
+
+if ($last_id > 0) {
+    $sql .= '   AND bbs_entries.id < :last_id';
+}
+$sql .= ' ORDER BY bbs_entries.id DESC LIMIT :limit';
+
 $select_sth = $dbh->prepare($sql);
-$select_sth->execute([
-  ':login_user_id' => $_SESSION['login_user_id'],
-]);
+
+$select_sth->bindValue(':login_user_id', $_SESSION['login_user_id'], PDO::PARAM_INT);
+$select_sth->bindValue(':limit', $limit, PDO::PARAM_INT);
+if ($last_id > 0) {
+    $select_sth->bindValue(':last_id', $last_id, PDO::PARAM_INT);
+}
+$select_sth->execute();
 
 // bodyのHTMLを出力するための関数を用意する
 function bodyFilter (string $body): string
@@ -55,5 +67,4 @@ foreach ($select_sth as $entry) {
 header("HTTP/1.1 200 OK");
 header("Content-Type: application/json");
 print(json_encode(['entries' => $result_entries]));
-
 

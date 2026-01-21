@@ -74,7 +74,7 @@ function bodyFilter (string $body): string
 html, body {
   margin: 0;
   padding: 0;
-}
+{}
 </style>
 <a href="/timeline.php">掲示板に戻る</a>
 <div style="position: relative; margin-bottom: 3em;">
@@ -168,13 +168,13 @@ html, body {
 </div>
 <?php else: // 他人の場合 ?>
 <div style="margin: 1em 0;">
-  <?php if(empty($relationship)): // フォローしていない場合 ?>
+  <?php if(empty($follow_relationship)): // フォローしていない場合 ?>
   <div>
     <a href="./follow.php?followee_user_id=<?= $user['id'] ?>">フォローする</a>
   </div>
   <?php else: // フォローしている場合 ?>
   <div>
-    <?= $relationship['created_at'] ?> にフォローしました。
+    <?= $follow_relationship['created_at'] ?> にフォローしました。
   </div>
   <?php endif; ?>
   <?php if(!empty($follower_relationship)): // フォローされている場合 ?>

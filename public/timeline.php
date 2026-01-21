@@ -58,6 +58,11 @@ $target_user_ids = array_map(
   $target_user_ids_select_sth->fetchAll()
 ); // array_map で followee_user_id カラムだけ抜き出す
 $target_user_ids[] = $_SESSION['login_user_id']; // 自分自身の投稿も表示対象とする
+
+$last_id_stmt = $dbh->prepare("SELECT id FROM bbs_entries ORDER BY id DESC LIMIT 1;");
+$last_id_stmt->execute();
+$last_id = $last_id_stmt->fetch(PDO::FETCH_ASSOC);
+
 ?>
 
 <div>
@@ -103,63 +108,109 @@ $target_user_ids[] = $_SESSION['login_user_id']; // 自分自身の投稿も表�
 document.addEventListener("DOMContentLoaded", () => {
   const entryTemplate = document.getElementById('entryTemplate');
   const entriesRenderArea = document.getElementById('entriesRenderArea');
+  let last_id = '<?php echo json_encode($last_id["id"] ?? 0); ?>';
+  let isLoading = false;
+  let step = 5;
 
-  const request = new XMLHttpRequest();
-  request.onload = (event) => {
-    const response = event.target.response;
-    response.entries.forEach((entry) => {
-      // テンプレートとするものから要素をコピー
-      const entryCopied = entryTemplate.cloneNode(true);
+  window.addEventListener('scroll', function() {
+      // ローディング中はガード
+      if (isLoading) return;
 
-      // display: none を display: block に書き換える
-      entryCopied.style.display = 'block';
+      // 画面下部まで来たら発火
+      const scrollHeight = document.documentElement.scrollHeight;
+      const scrollPosition = window.innerHeight + window.scrollY;
+      const triggerBottom = 100;
+      
+      // リクエスト処理
+      if ((scrollHeight - scrollPosition) < triggerBottom) {
+          if (last_id !== 1) {
+            fetchMorePosts();
+          }
+      }
+  });
 
-      // 番号(ID)を表示
-      entryCopied.querySelector('[data-role="entryIdArea"]').innerText = entry.id.toString();
+  function fetchMorePosts() {
+      // ロック開始
+      isLoading = true;
+      console.log("読み込み開始... 基準ID:", last_id);
 
-      // アイコン画像
-      entryCopied.querySelector('[data-role="entryUserIconImage"]').src = entry.icon_file_url;
-      console.log(entry.icon_file_url);
+      const request = new XMLHttpRequest();
 
-      // 名前を表示
-      entryCopied.querySelector('[data-role="entryUserNameAnchor"]').innerText = entry.user_name;
+      const url = `/timeline_json.php?last_id=${last_id}&limit=${step}`
+     
+      request.open('GET', url, true); // timeline_json.php を叩く
+      request.responseType = 'json';
+ 
+      request.onload = (event) => {
+        const response = event.target.response;
+        response.entries.forEach((entry) => {
+          // テンプレートとするものから要素をコピー
+          const entryCopied = entryTemplate.cloneNode(true);
 
-      // 名前のところのリンク先(プロフィール)のURLを設定
-      entryCopied.querySelector('[data-role="entryUserAnchor"]').href = entry.user_profile_url;
+    
+          // display: none を display: block に書き換える
+          entryCopied.style.display = 'block';
+    
+          // 番号(ID)を表示
+          entryCopied.querySelector('[data-role="entryIdArea"]').innerText = entry.id.toString();
+    
+          // アイコン画像
+          entryCopied.querySelector('[data-role="entryUserIconImage"]').src = entry.icon_file_url;
+          console.log(entry.icon_file_url);
+    
+          // 名前を表示
+          entryCopied.querySelector('[data-role="entryUserNameAnchor"]').innerText = entry.user_name;
+    
+          // 名前のところのリンク先(プロフィール)のURLを設定
+          entryCopied.querySelector('[data-role="entryUserAnchor"]').href = entry.user_profile_url;
+    
+          // 投稿日時を表示
+          entryCopied.querySelector('[data-role="entryCreatedAtArea"]').innerText = entry.created_at;
+    
+          // 本文を表示 (ここはHTMLなのでinnerHTMLで)
+          entryCopied.querySelector('[data-role="entryBodyArea"]').innerHTML = entry.body;
+    
+          // 画像が存在する場合に本文の下部に画像を表示
+          if (entry.image_file_url !== undefined && entry.image_file_url !== '') {
+            const imageElement = new Image();
+            imageElement.src = entry.image_file_url; // 画像URLを設定
+            imageElement.style.display = 'block'; // ブロック要素にする (img要素はデフォルトではインライン要素のため)
+            imageElement.style.marginTop = '1em'; // 画像上部の余白を設定
+            imageElement.style.maxHeight = '300px'; // 画像を表示する最大サイズ(縦)を設定
+            imageElement.style.maxWidth = '300px'; // 画像を表示する最大サイズ(横)を設定
+            entryCopied.querySelector('[data-role="entryBodyArea"]').appendChild(imageElement); // 本文エリアに画像を追加
+          }
+    
+          // 最後に実際の描画を行う
+          entriesRenderArea.appendChild(entryCopied);
+    
+          // last_idの更新
+          last_id = entry.id;
+        });
+        
+        console.log("更新後の last_id:", last_id);
+        // ロック解除
+        isLoading = false;
+      }
+ 
+      request.onerror = function() {
+          console.error("ネットワークエラー");
+          isLoading = false;
+      };
 
-      // 投稿日時を表示
-      entryCopied.querySelector('[data-role="entryCreatedAtArea"]').innerText = entry.created_at;
-
-      // 本文を表示 (ここはHTMLなのでinnerHTMLで)
-      entryCopied.querySelector('[data-role="entryBodyArea"]').innerHTML = entry.body;
-
-      // 画像が存在する場合に本文の下部に画像を表示
-      if (entry.image_file_url !== undefined && entry.image_file_url !== '') {
-        const imageElement = new Image();
-        imageElement.src = entry.image_file_url; // 画像URLを設定
-        imageElement.style.display = 'block'; // ブロック要素にする (img要素はデフォルトではインライン要素のため)
-        imageElement.style.marginTop = '1em'; // 画像上部の余白を設定
-        imageElement.style.maxHeight = '300px'; // 画像を表示する最大サイズ(縦)を設定
-        imageElement.style.maxWidth = '300px'; // 画像を表示する最大サイズ(横)を設定
-        entryCopied.querySelector('[data-role="entryBodyArea"]').appendChild(imageElement); // 本文エリアに画像を追加
-	  }
-
-      // 最後に実際の描画を行う
-      entriesRenderArea.appendChild(entryCopied);
-    });
-  }
-  request.open('GET', '/timeline_json.php', true); // timeline_json.php を叩く
-  request.responseType = 'json';
-  request.send();
-
-  const imageInput = document.getElementById("imageInput");
-  imageInput.addEventListener("change", () => {
-    if (imageInput.files.length < 1) {
-      // 未選択の場合
-      return;
-    }
-
-    const file = imageInput.files[0];
+      request.send();
+   };
+ 
+   fetchMorePosts();
+ 
+   const imageInput = document.getElementById("imageInput");
+   imageInput.addEventListener("change", () => {
+     if (imageInput.files.length < 1) {
+       // 未選択の場合
+       return;
+     }
+ 
+     const file = imageInput.files[0];
     if (!file.type.startsWith('image/')){ // 画像でなければスキップ
       return;
     }

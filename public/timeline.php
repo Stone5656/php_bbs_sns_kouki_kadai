@@ -111,6 +111,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let last_id = '<?php echo json_encode($last_id["id"] ?? 0); ?>';
   let isLoading = false;
   let step = 5;
+  let limit_flag = false;
 
   window.addEventListener('scroll', function() {
       // ローディング中はガード
@@ -136,8 +137,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const request = new XMLHttpRequest();
 
-      const url = `/timeline_json.php?last_id=${last_id}&limit=${step}`
-     
+      let url = `/timeline_json.php?last_id=${last_id}&limit=${step}`;
+
+      if (limit_flag === true) {
+        return;
+      }
       request.open('GET', url, true); // timeline_json.php を叩く
       request.responseType = 'json';
  
@@ -185,7 +189,11 @@ document.addEventListener("DOMContentLoaded", () => {
           entriesRenderArea.appendChild(entryCopied);
     
           // last_idの更新
-          last_id = entry.id;
+          if (entry.id < step) {
+            limit_flag = true;
+          } else {
+            last_id = entry.id;
+          }
         });
         
         console.log("更新後の last_id:", last_id);

@@ -9,12 +9,12 @@ Git/Dockerのセットアップ、アプリケーションの起動までの手�
 
 ### 2.1 このリポジトリをクローンする
 
-1. Gitをインストール
+#### 2.1.1. Gitをインストール
 ```bash
 sudo yum install git -y
 ```
 
-2. リポジトリをクローンする
+#### 2.1.2. リポジトリをクローンする
 ```bash
 git clone https://github.com/Stone5656/php_bbs_sns_kouki_kadai.git
 ```

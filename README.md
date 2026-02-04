@@ -21,14 +21,14 @@ git clone https://github.com/Stone5656/php_bbs_sns_kouki_kadai.git
 
 ### 2.2 サービスを起動する
 
-1. Dockerをインストールする
+#### 2.2.1 Dockerをインストールする
 ```bash
 sudo yum install -y docker
 sudo systemctl start docker
 sudo systemctl enable docker
 ```
 
-2. ユーザーをdockerグループに追加
+#### 2.2.2. ユーザーをdockerグループに追加
 ```bash
 sudo usermod -a -G docker ec2-user
 ```
@@ -37,24 +37,24 @@ sshの再接続が必要なので、一度ログアウトしてください
 exit
 ```
 
-3. Docker Composeをインストールする
+#### 2.2.3. Docker Composeをインストールする
 ```bash
 sudo mkdir -p /usr/local/lib/docker/cli-plugins/
 sudo curl -SL https://github.com/docker/compose/releases/download/v2.36.0/docker-compose-linux-x86_64 -o /usr/local/lib/docker/cli-plugins/docker-compose
 sudo chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
 ```
 
-4. ルートフォルダに移動
+#### 2.2.4. ルートフォルダに移動
 ```bash
 cd php_bbs_sns_kouki_kadai/
 ```
 
-5. サービスを起動する
+#### 2.2.5. サービスを起動する
 ```bash
 docker compose up -d
 ```
 
-6. テーブルを作成する
+#### 2.2.6. テーブルを作成する
 Mysql用のコンテナに接続します。
 ```bash
 docker compose exec mysql mysql example_db
